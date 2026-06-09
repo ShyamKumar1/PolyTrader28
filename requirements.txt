@@ -1,0 +1,26 @@
+# =============================================================================
+# PolyTrader28 - ₹500 to Millions Polymarket Arbitrage Bot
+# =============================================================================
+# Install with: pip install -r requirements.txt
+# Python 3.10+ required
+
+# --- Core ---
+python-dotenv>=1.0.0          # Load .env configuration file
+requests>=2.31.0              # HTTP requests for Polymarket REST API
+websocket-client>=1.7.0       # WebSocket client for Binance price stream
+flask>=3.0.0                  # Web dashboard server
+flask-cors>=4.0.0             # CORS for dashboard API
+
+# --- Data & Analysis ---
+numpy>=1.26.0                 # Numerical computations for edge calculations
+pandas>=2.1.0                 # Data manipulation for backtesting
+
+# --- Backtesting ---
+python-binance>=1.0.19        # Binance API for historical data download
+matplotlib>=3.8.0             # Charts for backtest results
+ccxt>=4.2.0                   # Alternative exchange API wrapper (fallback)
+py-clob-client-v2>=1.0.1        # Polymarket CLOB V2 SDK (EIP-712 signing, order placement)
+web3>=6.15.0                  # Web3 utilities for Polymarket
+
+# --- Utilities ---
+schedule>=1.2.0               # Periodic task scheduling

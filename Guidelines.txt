@@ -1,0 +1,248 @@
+You are a world-class AI engineer and quantitative trading expert with deep
+specialization in prediction market arbitrage. Your mission is to architect and
+produce a COMPLETE, PRODUCTION-READY Polymarket 15-minute BTC & ETH arbitrage
+trading bot in Python. This bot MUST achieve a 97%+ win rate and be optimized to
+grow an initial capital of approximately ₹500 (denominated in USDC on the Polygon
+network) to millions over time through strict compounding and risk management.
+The user has zero coding experience, so the code must be exhaustively commented
+and include a comprehensive setup guide. OUTPUT EVERYTHING BELOW — no
+placeholders, no "fill in later" comments, no AI slop. This is a mission-critical
+deployment.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: BOT ARCHITECTURE & CORE LOGIC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. STRATEGY TYPE: Dual-Strategy Polymarket Arbitrage Engine
+
+   - Strategy A (Primary — "Time Arbitrage / Price-Lag"):
+     Polymarket's 15-minute BTC and ETH Up/Down markets often lag behind real-
+     time price movements on major centralized exchanges (Binance, Coinbase).
+     Exploit this by:
+       a. Streaming BTC and ETH prices from Binance WebSocket (real-time).
+       b. Fetching current YES/NO prices from Polymarket's CLOB API for BTC 15m
+          Up/Down and ETH 15m Up/Down markets.
+       c. Computing the "implied probability" from Binance's price vs. the
+          15-minute opening price, then comparing it to Polymarket's market
+          odds. When a statistically significant discrepancy exists (≥3–5% edge)
+          and Polymarket hasn't yet repriced, execute a directional bet on the
+          mispriced side. Enter only when the edge exceeds a configurable
+          threshold. Close positions early if the edge flips or a stop-loss
+          trigger fires.
+
+   - Strategy B (Secondary — "Dual-Side Arbitrage / Complete-Set Arbitrage"):
+     When YES + NO prices for the SAME 15-minute contract sum to less than $1.00
+     (e.g., YES = $0.48, NO = $0.48 → sum = $0.96), BUY BOTH SIDES
+     simultaneously. Regardless of the outcome, the combined payout is $1.00,
+     guaranteeing a risk-free profit of $0.04 per pair. The bot MUST scan all
+     active 15-minute BTC and ETH contracts for this condition every second and
+     execute instantly when found.
+
+2. MARKET UNIVERSE (Polymarket):
+   - BTC 15-Minute Up/Down
+   - ETH 15-Minute Up/Down
+   - (Optional expansion: SOL 15-Minute Up/Down once capital exceeds $500)
+
+3. DATA PIPELINE:
+   - Binance WebSocket: `wss://stream.binance.com:9443/ws/btcusdt@trade` and
+     `wss://stream.binance.com:9443/ws/ethusdt@trade` for real-time price ticks.
+   - Polymarket CLOB API: REST endpoint for fetching order books and placing
+     orders (documented at docs.polymarket.com).
+   - Historical price store: SQLite (local) or PostgreSQL (server) to log every
+     tick and trade for backtesting and audit.
+
+4. POSITION SIZING & RISK MANAGEMENT (THIS IS THE CRITICAL SECTION):
+   - Maximum position per trade: 5% of total bankroll (starts at ~$0.30,
+     grows proportionally).
+   - Stop-loss per trade: -15% of position value. Hard-coded, never overridden.
+   - Maximum concurrent open positions: 3 (to avoid overexposure).
+   - Daily drawdown limit: if bankroll drops 15% in a single day, halt all
+     trading and send alert.
+   - Compounding rule: after every 10 winning trades, recalculate position size
+     based on new bankroll.
+   - Minimum edge threshold for Strategy A: 3% (configurable up to 5%).
+   - Strategy B execution threshold: YES + NO ≤ $0.985 (configurable).
+   - NEVER use leverage. Spot positions only.
+
+5. EXECUTION ENGINE:
+   - Poll Polymarket order books every 500ms. Place limit orders (not market
+     orders) to avoid slippage. If order not filled within 2 seconds, cancel
+     and re-evaluate.
+   - Priority: Strategy B opportunities execute first (risk-free). Strategy A
+     opportunities execute second.
+   - Threading: separate threads for price streaming, opportunity detection,
+     order execution, and health monitoring.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: COMPLETE PYTHON CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Produce a complete, single-file Python script (`polymarket_bot.py`) that
+implements EVERYTHING described above. Requirements:
+  - Python 3.10+
+  - Libraries used: `requests`, `websocket-client`, `py-clob-client` (or direct
+    REST calls to Polymarket), `python-dotenv`, `logging`, `threading`, `json`,
+    `time`, `sqlite3`.
+  - EVERY function must have a detailed docstring explaining its purpose,
+    parameters, and return values.
+  - EVERY line of trading logic must have an inline comment.
+  - Include a `config.py` or `.env` template with ALL configurable variables
+    clearly labeled.
+  - Include a health check endpoint (print to console and log) every 60 seconds:
+    bankroll, open positions, P&L, win rate, uptime.
+  - Include a Telegram alert integration for stop-loss triggers and daily
+    summaries.
+
+DO NOT USE PLACEHOLDERS. Every function must be fully implemented with
+working logic.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3: SETUP GUIDE & DEPLOYMENT INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Produce a step-by-step guide titled "DEPLOYMENT_GUIDE.md" covering:
+
+1. Prerequisites: Python 3.10+, Git, a Polygon wallet (MetaMask), ₹500 worth of
+   USDC on Polygon network, a Polymarket account, Binance API keys (read-only
+   for price feed).
+2. How to fund the Polygon wallet with USDC from WazirX or CoinDCX (step by
+   step, including withdrawal instructions specific to Indian exchanges).
+3. How to generate Polymarket API credentials.
+4. How to install dependencies: `pip install -r requirements.txt`.
+5. How to configure the `.env` file.
+6. How to run the bot: `python polymarket_bot.py`.
+7. How to run in dry-run / paper-trading mode first (use Polymarket testnet or
+   simulated execution).
+8. How to set up as a systemd service for 24/7 operation on a Linux VPS
+   (recommend AWS Lightsail or similar, ~$5/month).
+9. Monitoring: how to check logs, P&L, and health status.
+10. Emergency stop procedure: how to halt the bot instantly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4: BACKTESTING MODULE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Include a `backtest.py` script that:
+  - Reads historical BTC/ETH price data from Binance (download using
+    `python-binance` or CCXT).
+  - Simulates Polymarket 15-minute contract settlement using actual historical
+    prices to approximate win rates.
+  - Plots equity curve, drawdown chart, and win rate over time using matplotlib.
+  - Outputs a performance summary: total return, win rate, max drawdown, Sharpe
+    ratio, number of trades.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADDENDUM: FRONTEND DASHBOARD REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You must also build a LIVE WEB DASHBOARD that shows the user everything about
+the bot in real time. The dashboard must be simple to run, require no frontend
+coding knowledge, and work alongside the bot on the same machine.
+
+1. DASHBOARD TECHNOLOGY STACK:
+   - Backend: Flask (lightweight, runs in the bot process or as a separate
+     process). Expose a REST API for the dashboard.
+   - Frontend: A single HTML page served by Flask, using vanilla JavaScript
+     and Chart.js for charts. The page must auto‑refresh every 1 second via
+     polling (AJAX) – NO WebSockets, to keep things dead simple.
+   - No external CSS frameworks – the HTML must be styled with clean,
+     readable inline CSS (black background, green/red text for profit/loss).
+
+2. BOT MODIFICATIONS TO SUPPORT THE DASHBOARD:
+   - ADD a Flask web server running on `0.0.0.0:8050` (so it’s accessible from
+     the browser on the same machine or local network). This server must be
+     started in a separate daemon thread from `polymarket_bot.py`.
+   - ENDPOINTS TO IMPLEMENT:
+     a) `GET /api/status` – returns JSON:
+        {
+          "bankroll_usdc": float,
+          "open_positions": [ { "market": "BTC 15m Up", "side": "YES", "entry": 0.52, "current": 0.56, "pnl_pct": 7.69 } ],
+          "win_rate": float (overall, e.g. 97.5),
+          "total_trades": int,
+          "daily_pnl_usdc": float,
+          "is_running": bool,
+          "last_update": "ISO timestamp"
+        }
+     b) `POST /api/stop` – sets a global threading.Event flag that the bot
+        checks every loop iteration; when set, the bot stops opening new
+        trades and closes all existing positions gracefully, then pauses.
+     c) `POST /api/start` – clears the stop flag so the bot can resume (if
+        paused).
+     d) `GET /api/trades?limit=50` – returns the last N trades from the
+        database with fields: timestamp, market, side, entry_price,
+        exit_price, profit_usdc, win (bool).
+   - The bot MUST check the stop flag before every trade execution. If the flag
+     is set, it must skip all new entries and immediately attempt to sell any
+     open positions at market.
+   - All endpoints must return JSON with appropriate HTTP status codes.
+
+3. FRONTEND HTML PAGE (SERVED AT `/`):
+   - Design a modern, dark‑theme dashboard with the following sections:
+     * Top bar: Bot name "₹500 to Millions AI Bot", current USDC bankroll
+       (large green font), today's P&L (green/red), overall win rate (%).
+     * Active Positions Table: columns = Market, Side, Entry Price, Current
+       Price, P&L %, Close button (sends POST /api/close?market=...&side=...).
+     * Trade History Table: last 20 trades with time, market, side, profit,
+       win/loss badge.
+     * Equity Curve Chart: a line chart (Chart.js) showing bankroll over time.
+       Data comes from a new endpoint `GET /api/equity?range=7d` that returns
+       timestamps and bankroll snapshots (logged every 5 minutes to DB).
+     * Control Buttons: "STOP BOT" (calls /api/stop), "START BOT" (calls
+       /api/start). Each shows a confirmation alert.
+   - The dashboard must auto‑refresh every 1 second by calling `/api/status`
+     and `/api/trades` and updating the UI without a full page reload.
+   - All monetary values must be displayed in USDC with 2 decimals.
+
+4. DATABASE EXTENSIONS:
+   - Add a new table `equity_snapshots` with columns `timestamp` and
+     `bankroll_usdc`. The bot must insert a snapshot every 5 minutes.
+   - Add a `trades` table (if not already present) with all fields mentioned.
+
+5. CODE OUTPUT REQUIREMENTS:
+   - Produce a new file `dashboard.py` that contains the Flask app, HTML
+     template (as a multi‑line string), and all endpoint logic. This file must
+     be executable standalone (`python dashboard.py`) and connect to the same
+     SQLite database as the bot.
+   - ALTERNATIVELY, integrate the Flask endpoints directly into
+     `polymarket_bot.py` so a single script runs everything. Clearly document
+     how to start the dashboard.
+   - Include detailed docstrings and inline comments.
+   - The HTML must be fully self‑contained (inline CSS & JS, no external
+     dependencies except Chart.js loaded from CDN).
+
+6. DEPLOYMENT INSTRUCTIONS (update DEPLOYMENT_GUIDE.md):
+   - How to access the dashboard from a browser (http://localhost:8050).
+   - How to expose it securely if using a VPS (basic Nginx reverse proxy
+     with simple password authentication – provide a sample config).
+   - How to run the dashboard alongside the bot (screen/tmux or systemd
+     services).
+
+7. SECURITY NOTE:
+   - The dashboard runs locally by default. If exposed to the internet, the
+     user MUST set a password. Include a simple API key check (hardcoded in
+     .env) for the /api/stop and /api/start endpoints, and a login form on
+     the web page. Output this as an optional configuration.
+
+ADD THIS ENTIRE DASHBOARD SYSTEM TO THE BOT CODEBASE. NO PLACEHOLDERS.
+NO AI SLOP. EVERY LINE MUST BE PRODUCTION‑READY.
+    
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONSTRAINTS & NON-NEGOTIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Code must be MODULAR: separate files for config, strategy, execution, data,
+  utils.
+- NO AI SLOP: zero placeholder comments, zero "TODO" lines, zero "implement
+  later" sections.
+- Every line of production code must be tested in logic flow.
+- The bot must handle API rate limits gracefully with exponential backoff.
+- The bot must handle network disconnections and reconnect automatically.
+- The bot must log EVERYTHING — trades, errors, opportunities detected, API
+  responses.
+- The bot must NEVER risk more than 5% of bankroll on any single trade.
+- The bot must run on minimal hardware — a $5/month VPS with 1 GB RAM should
+  suffice.
+
+OUTPUT THE COMPLETE, WORKING CODEBASE IMMEDIATELY. DO NOT TRUNCATE.
